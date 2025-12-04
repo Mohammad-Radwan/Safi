@@ -46,7 +46,7 @@ jobs:
       env:
         SECRET_KEY: "ci_test_key"
         MONGO_URI: "mongomock://localhost"
-      run: pytest
+      run: PYTHONPATH=$(pwd) pytest
 
   # JOB 2: Docker Verification
   # Runs only if 'quality-check' passes. Ensures the Dockerfile actually builds.
