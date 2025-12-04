@@ -1,0 +1,17 @@
+[flake8]
+# Black uses 88 characters, so we must tell Flake8 to allow it
+max-line-length = 88
+
+# E203: Whitespace before ':' (Black does this intentionally)
+# E501: Line too long (We let Black handle formatting, Flake8 handles logic)
+# W503: Line break before binary operator
+extend-ignore = E203, E501, W503
+
+exclude =
+    .git,
+    __pycache__,
+    venv,
+    .venv,
+    docker,
+    docs,
+    migrations

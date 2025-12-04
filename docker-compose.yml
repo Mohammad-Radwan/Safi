@@ -1,17 +1,29 @@
-version: '3.8'
-
 services:
   web:
     build:
       context: .
       dockerfile: Dockerfile
-    container_name: safi_app
+    container_name: safi_dev
     restart: always
-    
-    command: gunicorn --bind 0.0.0.0:5000 --workers 4 --threads 2 --worker-class gthread --timeout 120 run:app
-    
+
+    command: flask run --host=0.0.0.0 --port=5000
+
     ports:
       - "5000:5000"
     environment:
       - FLASK_APP=run.py
-      - FLASK_DEBUG=0
+      - FLASK_DEBUG=1
+
+    volumes:
+      - .:/app
+
+  test_runner:
+    build:
+      context: .
+      dockerfile: Dockerfile
+
+    command: pytest
+    volumes:
+      - .:/app
+    environment:
+      - FLASK_DEBUG=1

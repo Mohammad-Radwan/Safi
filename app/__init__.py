@@ -1,6 +1,8 @@
 from flask import Flask
-from config import DevelopmentConfig
+
 from app.logging_config import configure_logging
+from config import DevelopmentConfig
+
 
 def create_app(config_class=DevelopmentConfig):
     app = Flask(__name__)
@@ -11,5 +13,5 @@ def create_app(config_class=DevelopmentConfig):
     app.logger.info("Starting up the application...")
 
     # ... rest of your code ...
-    
+
     return app
