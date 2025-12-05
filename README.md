@@ -69,10 +69,18 @@ $ pre-commit install
 
 _Now, Git will automatically fix your formatting when you commit code._
 
-### 5. Run the App
+### 5. Run Docker Compose Services
 
 ```bash
-$ docker-compose up --build
+$ cd docker
+$ cp .env.example .env
+```
+
+- Update `.env` with your credentials.
+
+```bash
+$ cd docker
+$ sudo docker compose up -d
 ```
 
 - **Backend:** <http://localhost:5000>
