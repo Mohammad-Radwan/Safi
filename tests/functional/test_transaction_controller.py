@@ -89,7 +89,7 @@ def test_create_settlement_flow(client):
     group_service.save_new_group(group)
     group_repo.add_member(group.group_id, receiver_id)
     response = client.post(
-        "/transactions/create",
+        "/transactions/settle",
         data={"pay_to": receiver_id, "amount": "50.0", "group_id": group.group_id},
     )
 

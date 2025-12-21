@@ -38,7 +38,7 @@ def test_create_settlement_success():
     assert args.payer_id == "u1"
     assert args.receiver_id == "u2"
     assert args.group_id == "g1"
-    assert args.status == "completed"
+    assert args.status == "pending"
 
 
 def test_get_user_transactions():

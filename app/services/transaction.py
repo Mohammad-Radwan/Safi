@@ -29,15 +29,101 @@ class TransactionService(BaseService):
         if not payer or not receiver or not group:
             raise ResourceNotFound("User or Group not found")
 
-        transaction = TransactionSchema(
+        # Create transaction with pending status
+        transaction_schema = TransactionSchema(
             amount=amount,
             payer_id=payer_id,
             receiver_id=receiver_id,
             group_id=group_id,
-            status="completed",  # Settlements are usually instant/confirmed
+            status="pending",
         )
 
-        return self.transaction_repo.add(transaction)
+        txn_id = self.transaction_repo.add(transaction_schema)
+
+        # Construct full Transaction object for signal
+        # Use simple object or lightweight structure if needed, but the Observer expects a Transaction model
+        # validation is already done above.
+
+        # We need to ensure we convert GroupSchema to Group using the helper if needed,
+        # but we already fetched the `group` domain model (from group_repo.get_by_id? No, that returns Schema likely).
+        # Let's check: self.group_repo.get_by_id returns GroupSchema.
+
+        # Correctly reconstruct Group domain object for the Transaction model
+        # We need the first member of the group to be fully compliant with the Group model definition
+        first_member = self.user_repo.get_by_id(group.first_member_id)
+
+        group_domain = Group(
+            **group.model_dump(exclude={"first_member_id", "members_ids"}),
+            first_member=first_member,
+            members=[],
+        )
+
+        transaction = Transaction(
+            **transaction_schema.model_dump(
+                exclude={"payer_id", "receiver_id", "group_id"}
+            ),
+            payer=payer,
+            receiver=receiver,
+            group=group_domain,
+        )
+
+        # Import signals locally to avoid circular imports if any
+        from app.events.signals import confirmation_requested
+
+        confirmation_requested.send(self, transaction=transaction)
+
+        return txn_id
+
+    def confirm_transaction(
+        self, transaction_id: str, notification_id: Optional[str] = None
+    ) -> None:
+        transaction_schema = self.transaction_repo.get_by_id(transaction_id)
+        if not transaction_schema:
+            raise ResourceNotFound("Transaction not found")
+
+        if transaction_schema.status == "completed":
+            return  # Already confirmed
+
+        # Update status
+        updated_schema = transaction_schema.model_copy(update={"status": "completed"})
+        self.transaction_repo.update(transaction_id, updated_schema)
+
+        # Retrieve full object
+        transaction = self.get_transaction(transaction_id)
+
+        if transaction:
+            from app.events.signals import transaction_confirmed
+
+            transaction_confirmed.send(
+                self, transaction=transaction, notification_id=notification_id
+            )
+        else:
+            self.logger.warning(
+                f"Could not load full transaction {transaction_id} for notification (missing relations?)"
+            )
+
+    def reject_transaction(
+        self, transaction_id: str, notification_id: Optional[str] = None
+    ) -> None:
+        transaction_schema = self.transaction_repo.get_by_id(transaction_id)
+        if not transaction_schema:
+            raise ResourceNotFound("Transaction not found")
+
+        if transaction_schema.status != "pending":
+            return  # Can only reject pending transactions
+
+        # Update status
+        updated_schema = transaction_schema.model_copy(update={"status": "failed"})
+        self.transaction_repo.update(transaction_id, updated_schema)
+
+        # Retrieve full object (optional check if strictly needed, but consistent)
+        transaction = self.get_transaction(transaction_id)
+        if transaction:
+            from app.events.signals import transaction_rejected
+
+            transaction_rejected.send(
+                self, transaction=transaction, notification_id=notification_id
+            )
 
     def get_group_transactions(self, group_id: str) -> List[Transaction]:
         schemas = self.transaction_repo.get_by_group(group_id)

@@ -9,7 +9,7 @@
     --color-text-main: #1A1A1A;
     --color-text-muted: #9CA3AF;
     --color-success: #10B981;
-    --color-danger: #EF4444;
+    --color-error: #EF4444;
     --color-blue: #3B82F6;
 }
 
@@ -160,8 +160,8 @@ body {
     font-weight: 700;
 }
 
-.text-status-danger {
-    color: var(--color-danger);
+.text-status-error {
+    color: var(--color-error);
     font-weight: 700;
 }
 
@@ -264,7 +264,7 @@ body {
 }
 
 .stat-value.negative {
-    color: var(--color-danger);
+    color: var(--color-error);
 }
 
 .feed-list {

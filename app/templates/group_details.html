@@ -100,7 +100,7 @@
             <div class="text-right flex items-center gap-4">
                 <div>
                     <p class="text-base
-                                    {% if user_share < 0 %}text-status-danger
+                                    {% if user_share < 0 %}text-status-error
                                     {% else %}{% if user_share > 0 %}text-status-success
                                     {% else %} text-status
                                     {% endif %}{% endif %}">
@@ -140,7 +140,7 @@
         <div class="card">
             <p class="stat-label">Your Position</p>
             <h2 class="text-base
-                                {% if your_balance < 0 %}text-status-danger
+                                {% if your_balance < 0 %}text-status-error
                                 {% else %}{% if your_balance > 0 %}text-status-success
                                 {% else %} text-status
                                 {% endif %}{% endif %} text-3xl mb-4">
@@ -185,7 +185,7 @@
                             {% set balance = member_balances[member.user_id] %}
                             {% if balance > 0 %}
                             <span class="text-status-success font-bold text-xs">Owes you {{ balance }}</span>
-                            {% elif balance < 0 %} <span class="text-status-danger font-bold text-xs">You owe {{
+                            {% elif balance < 0 %} <span class="text-status-error font-bold text-xs">You owe {{
                                 balance|abs }}</span>
                                 {% else %}
                                 <span class="text-gray-400 font-bold text-xs">Settled</span>

@@ -1,3 +1,5 @@
+from typing import Optional
+
 from app.events.signals import (
     confirmation_requested,
     expense_created,
@@ -60,11 +62,70 @@ def handle_confirmation_requested(sender, transaction: Transaction, **extra):
     notify_repo.add(notification)
 
 
-def handle_transaction_confirmed(sender, transaction: Transaction, **extra):
+def update_notification_status(
+    transaction: Transaction, status: str, notification_id: Optional[str] = None
+):
     notify_repo = NotificationRepository()
+
+    if notification_id:
+        # Direct update (robust)
+        notification = notify_repo.get_by_id(notification_id)
+        if notification:
+            new_payload = notification.payload.copy()
+            new_payload["status"] = status
+            updated_notif = notification.model_copy(
+                update={"payload": new_payload, "is_read": True}
+            )
+            notify_repo.update(notification_id, updated_notif)
+        return
+
+    # Fallback to searching by user and logic (less robust)
+    notifications = notify_repo.get_all_by_user(transaction.receiver.user_id)
+    for notif in notifications:
+        if (
+            notif.type == "confirmation"
+            and notif.payload
+            and notif.payload.get("transaction_id") == transaction.transaction_id
+        ):
+
+            # Update payload
+            new_payload = notif.payload.copy()
+            new_payload["status"] = status
+
+            updated_notif = notif.model_copy(
+                update={"payload": new_payload, "is_read": True}
+            )
+            notify_repo.update(notif.notification_id, updated_notif)
+            break
+
+
+def handle_transaction_confirmed(
+    sender, transaction: Transaction, notification_id: Optional[str] = None, **extra
+):
+    notify_repo = NotificationRepository()
+
+    # Update existing notification for the receiver
+    update_notification_status(transaction, "confirmed", notification_id)
 
     message = f"Your transaction of {transaction.amount}EGP to {transaction.receiver.name} has been confirmed."
 
+    notification = NotificationSchema(
+        user_id=transaction.payer.user_id,
+        message=message,
+        payload={"transaction_id": transaction.transaction_id},
+    )
+    notify_repo.add(notification)
+
+
+def handle_transaction_rejected(
+    sender, transaction: Transaction, notification_id: Optional[str] = None, **extra
+):
+    # Update existing notification for the receiver
+    update_notification_status(transaction, "rejected", notification_id)
+
+    # Optionally notify the payer as well? Maybe "Your settlement request was rejected."
+    notify_repo = NotificationRepository()
+    message = f"Your transaction of {transaction.amount}EGP to {transaction.receiver.name} has been rejected."
     notification = NotificationSchema(
         user_id=transaction.payer.user_id,
         message=message,
@@ -78,3 +139,6 @@ def enable_notifications(app):
     invite_sent.connect(handle_User_invite)
     confirmation_requested.connect(handle_confirmation_requested)
     transaction_confirmed.connect(handle_transaction_confirmed)
+    from app.events.signals import transaction_rejected
+
+    transaction_rejected.connect(handle_transaction_rejected)

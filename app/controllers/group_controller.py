@@ -76,7 +76,7 @@ class GroupController(BaseController):
             message = getattr(e, "message", str(e))
             if is_json:
                 return {"status": "error", "message": message}, 400
-            flash(message, "danger")
+            flash(message, "error")
 
         return redirect(url_for("GroupController:list_groups"))
 
@@ -87,7 +87,7 @@ class GroupController(BaseController):
             self.group_service.refresh_invite_code(self.current_user.user_id, group_id)
             flash("Invite code regenerated successfully!", "success")
         except (ResourceNotFound, CreationError) as e:
-            flash(e.message, "danger")
+            flash(e.message, "error")
         return redirect(url_for("GroupController:get_group_details", group_id=group_id))
 
     @route("/<group_id>/leave", methods=["POST"])
@@ -99,7 +99,7 @@ class GroupController(BaseController):
             )
             flash("You have left the group.", "success")
         except (ResourceNotFound, CreationError) as e:
-            flash(e.message, "danger")
+            flash(e.message, "error")
             return redirect(
                 url_for("GroupController:get_group_details", group_id=group_id)
             )
@@ -114,7 +114,7 @@ class GroupController(BaseController):
             self.group_service.update_group_info(group_id, new_name, new_description)
             flash("Group updated successfully!", "success")
         except (ResourceNotFound, CreationError) as e:
-            flash(e.message, "danger")
+            flash(e.message, "error")
         return redirect(url_for("GroupController:get_group_details", group_id=group_id))
 
     @route("/<group_id>/members/remove", methods=["POST"])
@@ -135,7 +135,7 @@ class GroupController(BaseController):
             self.group_service.remove_member(group_id, member_id)
             flash("Member removed successfully!", "success")
         except (ResourceNotFound, CreationError) as e:
-            flash(e.message, "danger")
+            flash(e.message, "error")
         return redirect(url_for("GroupController:get_group_details", group_id=group_id))
 
     def _is_user_settled(self, group_id: str, user_id: str) -> bool:
@@ -198,7 +198,7 @@ class GroupController(BaseController):
             )
             flash("Admin privileges transferred successfully!", "success")
         except (ResourceNotFound, CreationError) as e:
-            flash(e.message, "danger")
+            flash(e.message, "error")
         return redirect(url_for("GroupController:get_group_details", group_id=group_id))
 
     @route("/<string:group_id>/details", methods=["GET"])
@@ -310,7 +310,7 @@ class GroupController(BaseController):
             self.group_service.delete_group(group_id)
             flash("Group deleted successfully!", "success")
         except (ResourceNotFound, CreationError) as e:
-            flash(e.message, "danger")
+            flash(e.message, "error")
             return redirect(
                 url_for("GroupController:get_group_details", group_id=group_id)
             )
@@ -323,5 +323,5 @@ class GroupController(BaseController):
             self.group_service.restore_group(self.current_user.user_id, group_id)
             flash("Group restored successfully!", "success")
         except (ResourceNotFound, CreationError) as e:
-            flash(e.message, "danger")
+            flash(e.message, "error")
         return redirect(url_for("GroupController:get_group_details", group_id=group_id))
