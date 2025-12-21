@@ -120,7 +120,7 @@
                     <div id="menu-{{ loop.index }}"
                         class="hidden absolute right-0 mt-2 w-32 bg-white rounded-md shadow-lg z-50 border border-gray-100 overflow-hidden">
                         <button
-                            onclick="openEditExpenseModal('{{ expense.expense_id }}', '{{ expense.description }}', '{{ expense.total_amount }}', '{{ expense.payer.user_id }}')"
+                            onclick='openEditExpenseModal("{{ expense.expense_id }}", "{{ expense.description }}", "{{ expense.total_amount }}", "{{ expense.payer.user_id }}", {{ expense.splits|map(attribute="participant.user_id")|list|tojson }})'
                             class="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2">
                             <i class="fas fa-edit text-xs"></i> Edit
                         </button>
@@ -243,7 +243,7 @@
         }
     }
 
-    function openEditExpenseModal(expenseId, description, amount, payerId) {
+    function openEditExpenseModal(expenseId, description, amount, payerId, involvedUserIds = []) {
         const allMenus = document.querySelectorAll('[id^="menu-"]');
         allMenus.forEach(menu => menu.classList.add('hidden'));
 
@@ -256,6 +256,16 @@
         if (payerSelect) {
             payerSelect.value = payerId;
         }
+
+        // Update Split With checkboxes
+        const splitCheckboxes = document.getElementById('editExpenseModal').querySelectorAll('input[name="split_with"]');
+        splitCheckboxes.forEach(checkbox => {
+            if (involvedUserIds.includes(checkbox.value)) {
+                checkbox.checked = true;
+            } else {
+                checkbox.checked = false;
+            }
+        });
 
         // Update the form action
         const form = document.getElementById('editExpenseForm');

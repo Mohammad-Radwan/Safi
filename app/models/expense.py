@@ -20,6 +20,7 @@ class ExpenseUpdateRequest(BaseModel):
     total_amount: float
     description: str = Field(default="")
     payer_id: str
+    participant_ids: List[str] = Field(default_factory=list)
 
 
 class ExpenseBase(BaseModel):

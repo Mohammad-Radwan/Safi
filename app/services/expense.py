@@ -46,6 +46,25 @@ class ExpenseService(BaseService):
         expense_schema.description = update_expense_request.description
         expense_schema.payer_id = update_expense_request.payer_id
 
+        if update_expense_request.participant_ids:
+            num_participants = len(update_expense_request.participant_ids)
+            if num_participants < 2:
+                # Fallback or error - simplistic handling for now
+                pass
+            else:
+                share_amount = round(
+                    update_expense_request.total_amount / num_participants, 2
+                )
+                from app.models.shared_expense import SharedExpenseSchema
+
+                new_splits = []
+                for uid in update_expense_request.participant_ids:
+                    new_splits.append(
+                        SharedExpenseSchema(
+                            participant_id=uid, amount=share_amount, status="unpaid"
+                        )
+                    )
+                expense_schema.splits = new_splits
         self.expense_repo.update(expense_id, expense_schema)
 
     def get_group_expenses(self, group_id: str) -> list[Expense]:

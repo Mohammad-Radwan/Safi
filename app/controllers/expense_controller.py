@@ -76,8 +76,9 @@ class ExpenseController(BaseController):
 
     @route("/<expense_id>/update", methods=["POST"])
     def update_expense(self, expense_id):
-        self.expense_service.update_expense(
-            expense_id, ExpenseUpdateRequest(**request.form.to_dict())
-        )
+        data = request.form.to_dict()
+        data["participant_ids"] = request.form.getlist("split_with")
+
+        self.expense_service.update_expense(expense_id, ExpenseUpdateRequest(**data))
         flash("Expense updated successfully!", "success")
         return redirect(request.referrer)
