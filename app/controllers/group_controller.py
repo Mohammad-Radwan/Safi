@@ -157,6 +157,35 @@ class GroupController(BaseController):
                 share += expense.total_amount
             user_shares.append(round(share, 2))
 
+        # Calculate balance per member relative to current user
+        member_balances = {member.user_id: 0.0 for member in group.members}
+
+        for expense in expenses:
+            payer_id = expense.payer.user_id
+            for split in expense.splits:
+                participant_id = split.participant.user_id
+                amount = split.amount
+
+                # Case 1: Current user paid for someone else -> They owe current user (+)
+                if (
+                    payer_id == self.current_user.user_id
+                    and participant_id != self.current_user.user_id
+                ):
+                    if participant_id in member_balances:
+                        member_balances[participant_id] += amount
+
+                # Case 2: Someone else paid for current user -> Current user owes them (-)
+                elif (
+                    participant_id == self.current_user.user_id
+                    and payer_id != self.current_user.user_id
+                ):
+                    if payer_id in member_balances:
+                        member_balances[payer_id] -= amount
+
+        # Round balances
+        for uid in member_balances:
+            member_balances[uid] = round(member_balances[uid], 2)
+
         is_admin = False
         if group.first_member.user_id == self.current_user.user_id:
             self.group_service.refresh_invite_code(self.current_user.user_id, group_id)
@@ -180,6 +209,7 @@ class GroupController(BaseController):
             group=group,
             expenses=list(zip(expenses, user_shares)),
             your_balance=round(sum(user_shares), 2),
+            member_balances=member_balances,
             current_user=self.current_user,
             is_admin=is_admin,
             back_endpoint=back_endpoint,
