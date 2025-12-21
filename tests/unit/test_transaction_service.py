@@ -3,7 +3,7 @@ from unittest.mock import MagicMock
 from app.models.group import GroupSchema
 from app.models.transaction import TransactionSchema
 from app.models.user import User
-from app.services.transaction_service import TransactionService
+from app.services.transaction import TransactionService
 
 
 def test_create_settlement_success():

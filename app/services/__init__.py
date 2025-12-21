@@ -2,6 +2,7 @@ from app.services.auth import AuthService
 from app.services.expense import ExpenseService
 from app.services.group import GroupService
 from app.services.notification import NotificationService
+from app.services.transaction import TransactionService
 from app.services.user import UserService
 
 __all__ = [
@@ -10,4 +11,5 @@ __all__ = [
     "ExpenseService",
     "UserService",
     "NotificationService",
+    "TransactionService",
 ]

@@ -1,7 +1,7 @@
 import pytest
 
 from app.repositories.user_repo import UserRepository
-from app.services.transaction_service import TransactionService
+from app.services.transaction import TransactionService
 
 
 @pytest.fixture

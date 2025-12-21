@@ -3,7 +3,7 @@ from flask_classful import route
 
 from app.controllers.base_controller import BaseController
 from app.services import GroupService
-from app.services.transaction_service import TransactionService
+from app.services.transaction import TransactionService
 
 
 class TransactionController(BaseController):

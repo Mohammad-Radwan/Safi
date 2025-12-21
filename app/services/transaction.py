@@ -39,6 +39,37 @@ class TransactionService(BaseService):
 
         return self.transaction_repo.add(transaction)
 
+    def get_group_transactions(self, group_id: str) -> List[Transaction]:
+        schemas = self.transaction_repo.get_by_group(group_id)
+        transactions = []
+        for schema in schemas:
+            try:
+                # Populate related objects
+                payer = self.user_repo.get_by_id(schema.payer_id)
+                receiver = self.user_repo.get_by_id(schema.receiver_id)
+                group_schema = self.group_repo.get_by_id(schema.group_id)
+
+                if payer and receiver and group_schema:
+                    # Convert GroupSchema to Group model
+                    group = self._convert_schema_to_group(group_schema)
+
+                    trans = Transaction(
+                        **schema.model_dump(
+                            exclude={"payer_id", "receiver_id", "group_id"}
+                        ),
+                        payer=payer,
+                        receiver=receiver,
+                        group=group,
+                    )
+                    transactions.append(trans)
+            except Exception as e:
+                self.logger.error(
+                    f"Error populating transaction {schema.transaction_id}: {e}"
+                )
+                continue
+
+        return transactions
+
     def get_user_transactions(self, user_id: str) -> List[Transaction]:
         schemas = self.transaction_repo.get_by_user(user_id)
         transactions = []

@@ -3,7 +3,7 @@ from flask_classful import route
 
 from app.controllers.base_controller import BaseController
 from app.models.group import GroupCreationRequest
-from app.services import ExpenseService, GroupService
+from app.services import ExpenseService, GroupService, TransactionService
 from app.utils.decorators import require_group_admin
 from app.utils.exceptions import CreationError, ResourceAlreadyExists, ResourceNotFound
 
@@ -15,6 +15,7 @@ class GroupController(BaseController):
         super().__init__()
         self.group_service = GroupService()
         self.expense_service = ExpenseService()
+        self.transaction_service = TransactionService()
 
     @route("/create", methods=["POST"])
     def create_group(self):
@@ -120,12 +121,72 @@ class GroupController(BaseController):
     @require_group_admin
     def remove_member(self, group_id):
         member_id = request.form.get("member_id")
+
+        if not self._is_user_settled(group_id, member_id):
+            flash(
+                "Cannot remove member. They must be fully settled with all group members first.",
+                "error",
+            )
+            return redirect(
+                url_for("GroupController:get_group_details", group_id=group_id)
+            )
+
         try:
             self.group_service.remove_member(group_id, member_id)
             flash("Member removed successfully!", "success")
         except (ResourceNotFound, CreationError) as e:
             flash(e.message, "danger")
         return redirect(url_for("GroupController:get_group_details", group_id=group_id))
+
+    def _is_user_settled(self, group_id: str, user_id: str) -> bool:
+        """
+        Check if a user has settled all debts within the group.
+        This checks bilateral balances with ALL other group members.
+        """
+        expenses = self.expense_service.get_group_expenses(group_id)
+        transactions = self.transaction_service.get_group_transactions(group_id)
+        group = self.group_service.get_group(group_id)
+
+        # Map: other_user_id -> balance (positive means user_id is owed, negative means user_id owes)
+        balances = {m.user_id: 0.0 for m in group.members if m.user_id != user_id}
+
+        # 1. Process Expenses
+        for expense in expenses:
+            payer_id = expense.payer.user_id
+            for split in expense.splits:
+                participant_id = split.participant.user_id
+                amount = split.amount
+
+                # If user paid for other -> user is owed (positive)
+                if payer_id == user_id and participant_id in balances:
+                    balances[participant_id] += amount
+
+                # If other paid for user -> user owes (negative)
+                elif participant_id == user_id and payer_id in balances:
+                    balances[payer_id] -= amount
+
+        # 2. Process Transactions (Settlements)
+        for trans in transactions:
+            payer_id = trans.payer.user_id
+            receiver_id = trans.receiver.user_id
+            amount = trans.amount
+
+            # If user paid other -> user reduces debt to other OR creates credit (positive impact for user)
+            # e.g A owes B 50. A pays B 50. A's balance with B goes -50 + 50 = 0.
+            if payer_id == user_id and receiver_id in balances:
+                balances[receiver_id] += amount
+
+            # If other paid user -> user's credit from other is satisfied OR debt created (negative impact for user)
+            # e.g A is owed 50 by B. B pays A 50. A's balance with B goes +50 - 50 = 0.
+            elif receiver_id == user_id and payer_id in balances:
+                balances[payer_id] -= amount
+
+        # Check if all balances are effectively zero
+        for bal in balances.values():
+            if abs(bal) > 0.01:  # Allow small floating point epsilon
+                return False
+
+        return True
 
     @route("/<group_id>/assign_admin", methods=["POST"])
     @require_group_admin
